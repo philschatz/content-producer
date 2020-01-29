@@ -1,0 +1,63 @@
+#!/bin/bash
+cd "$(dirname "$0")/.." || exit 111
+source ./script/bootstrap || exit 111
+
+
+arg1=$1
+
+# Pull in the BOOK_CONFIGS
+source ./books.txt || exit 1
+
+# Check command line args
+
+do_progress_quiet "Preparing styleguide for diffing" \
+  ./script/diff-guide-prepare "${arg1}" "baked"
+
+
+if [[ ! "${arg1}" == "--all" ]]; then
+  # Filter BOOK_CONFIGS to only contain the book you want to fetch
+  for recipe_name in "${RECIPE_NAMES[@]}"; do
+
+    if [[ "${arg1}" = "${recipe_name}" ]]; then
+      RECIPE_NAMES=("${recipe_name}")
+      found_config=1
+      break
+    fi
+  done
+
+  if [[ ! 1 -eq "${found_config}" ]]; then
+    _say "Valid books are (from ./books.txt):"
+    for recipe_name in "${RECIPE_NAMES[@]}"; do
+      _say "${recipe_name}"
+    done
+    die "Could not find Book info for recipe named ${arg1}"
+  fi
+fi
+
+diff_found=0
+for recipe_name in "${RECIPE_NAMES[@]}"; do
+
+  progress "Checking for differences in '${recipe_name}'"
+
+  while IFS= read -r -d '' baked_file; do # generic for loop
+
+    prepared_file="${baked_file/baked/prepared}"
+    if [[ -s "${prepared_file}" ]]; then
+
+      diff_count=$(diff "${prepared_file}" "${baked_file}" | wc -l)
+
+      if [[ 0 -ne "${diff_count}" ]]; then
+        _say "WARNING: There were ${diff_count} differences found. To see all of them run diff ${prepared_file} ${baked_file}:"
+        diff_found=1
+      fi
+
+    else
+      die "FAILING ${recipe_name} because the prepared file '${prepared_file}' was not found. Did you run './script/diff-guide-prepare ${recipe_name}' earlier?"
+    fi
+
+  done < <(find "./tmp/${recipe_name}" -name "*.baked.xhtml" -print0)
+done
+
+if [[ ! "${diff_found}" -eq "0" ]]; then
+  die "There were differences found so failing"
+fi

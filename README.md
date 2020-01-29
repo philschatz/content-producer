@@ -1,5 +1,6 @@
 # Create a baked pdf for a new book
 
+1. Set `PATH_TO_CNX_RECIPES="/path/to/cnx-recipes"` or prefix each command with it
 1. Run `docker-compose run --rm -e HOST=katalyst01.cnx.org fetch-book --with-resources intro-business` to download the cnxml from the server.
    - **Note:** To see the list of books available see `./books.txt`
 1. Run `docker-compose run --rm assemble-book intro-business` to create the single-file HTML for the book.

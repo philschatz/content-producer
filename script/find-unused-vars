@@ -1,0 +1,56 @@
+#!/bin/bash
+cd "$(dirname "$0")/.." || exit 111
+source ./script/bootstrap || exit 111
+
+# SASS does not have an elegant way to find unused variables.
+# This crude script uses regular expressions and some variable-name-checking
+# to find unused variables.
+#
+# Valid "Global" variables are those that either:
+# - start with "Config_"
+# - are all UPPER_CASE (enums)
+
+# Approach:
+# 1. Find variable declaration in the form of "$my-var: anyvalue"
+# 2. Loop through found variables and find occurrences of each variable in all sass files
+# 3. Filter out vars that occurred only once
+
+
+root_dir="./recipes"
+
+# Counter for the exit status
+unused_var_count=0
+
+re_variable_declaration1='^$[a-zA-Z0-9_-][^:]*'
+re_variable_declaration2='s/$\([a-zA-Z0-9_-][^:]*\).*/\1/'
+
+progress "Finding variables that are declared but could never possibly be used (conservative)"
+vars=$(find "${root_dir}" -type f -name "*.scss" -exec grep --color=never -h "${re_variable_declaration1}" {} \; | sed "${re_variable_declaration2}")
+for var_name in $vars; do
+  var_count=$(find "${root_dir}" -type f -name "*.scss" -exec grep --color=never -h "$var_name" "{}" \; | wc -l)
+  if [[ "${var_count}" -eq 1 ]]; then
+    _say "  Unused variable '\$${var_name}'"
+    ((unused_var_count+=1))
+  fi
+done
+
+
+# Define a helper named begins_with
+begins_with() { case $2 in "$1"*) true;; *) false;; esac; }
+
+progress "Finding variables that do not begin with 'Config_' and are not used in the local file"
+while IFS= read -r -d '' file_path; do # generic for loop
+  vars=$(grep "${re_variable_declaration1}" "${file_path}" | sed "${re_variable_declaration2}")
+  for var_name in $vars; do
+    var_count=$(grep -c "\$${var_name}" "${file_path}")
+    # NOTE: Skip vars that begin with $Config_ or are all $UPPER_CASE (constants)
+    if [[ "${var_count}" -eq 1 && "${var_name}" != $(echo "${var_name}" | tr '[:lower:]' '[:upper:]') ]]; then
+      if ! begins_with "Config_" "${var_name}"; then
+        _say "  ${file_path}: Unused local variable '\$${var_name}'"
+        ((unused_var_count+=1))
+      fi
+    fi
+  done
+done < <(find "${root_dir}" -type f -name "*.scss" -print0)
+
+exit ${unused_var_count}

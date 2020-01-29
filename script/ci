@@ -1,0 +1,24 @@
+#!/bin/bash
+cd "$(dirname "$0")/.." || exit 111
+
+LOG_LEVEL=${LOG_LEVEL:-debug} ./script/setup || exit 111
+
+# Run the tests (which happens to re-generate the CSS files)
+./script/test || exit 111
+
+# Verify that the CSS files were regenerated so they never become out-of-sync
+
+has_changes=$(git diff -- ':!/styles/output/_web-styles.json')
+
+if [[ -n "${has_changes}" ]]; then
+  echo "ERROR: Running the tests caused unexpected changes in committed files."
+  echo "Were the CSS files regenerated? Be sure to run ./script/test before pushing"
+  git diff -- ':!/styles/output/_web-styles.json'
+  exit 1
+fi
+
+if [[ "${CI}" == "true" ]]; then
+  pip install twine
+  python setup.py bdist_wheel --universal
+  twine check dist/*
+fi

@@ -1,8 +1,8 @@
 version: '3.2'
 services:
   fetch-book:
-    build: https://github.com/openstax/cnx-recipes.git
-    image: openstax/cnx-recipes
+    build: .
+    # image: openstax/output-producer-thing
     environment:
       # This is necessary in order to mount the correct directory if we start
       # sibling containers
@@ -10,8 +10,7 @@ services:
       OUTPUT_DIR: /out
       BOOTSTRAP_ALREADY_RAN: 1
     volumes:
-      # - .:/code
-      - ./data:/code/data
+      - .:/code
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint: /code/script/fetch-book
 
@@ -22,11 +21,11 @@ services:
       NEB_CONFIG: /etc/neb/config
     volumes:
       - "${HOST_PWD:-.}:/out"
-      # - "${HOST_PWD:-.}/config/neb-config:/etc/neb/config:ro"
+      - "${HOST_PWD:-.}/config/neb-config:/etc/neb/config:ro"
 
   assemble-book:
-    build: https://github.com/openstax/cnx-recipes.git
-    image: openstax/cnx-recipes
+    build: .
+    # image: openstax/output-producer-thing
     environment:
       # This is necessary in order to mount the correct directory if we start
       # sibling containers
@@ -34,27 +33,28 @@ services:
       OUTPUT_DIR: /out
       BOOTSTRAP_ALREADY_RAN: 1
     volumes:
-      # - .:/code
-      - ./data:/code/data
+      - .:/code
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint: /code/script/assemble-book
 
   bake-book:
-    build: https://github.com/openstax/cnx-recipes.git
-    image: openstax/cnx-recipes
+    build: .
+    # image: openstax/output-producer-thing
     environment:
+      PATH_TO_CNX_RECIPES: "${PATH_TO_CNX_RECIPES}"
       # This is necessary in order to mount the correct directory if we start
       # sibling containers
       HOST_PWD: "${PWD}"
     volumes:
-      # - .:/code
-      - ./data:/code/data
+      - .:/code
+      - "${PATH_TO_CNX_RECIPES}/recipes:/code/recipes"
+      - "${PATH_TO_CNX_RECIPES}/styles:/code/styles"
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint: /code/script/bake-book
 
   mathify-book:
-    build: https://github.com/openstax/cnx-recipes.git
-    image: openstax/cnx-recipes
+    build: .
+    # image: openstax/output-producer-thing
     environment:
       # This is necessary in order to mount the correct directory if we start
       # sibling containers
@@ -62,8 +62,7 @@ services:
       OUTPUT_DIR: /out
       BOOTSTRAP_ALREADY_RAN: 1
     volumes:
-      # - .:/code
-      - ./data:/code/data
+      - .:/code
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint: /code/script/mathify-book
 
@@ -74,17 +73,18 @@ services:
       - "${HOST_PWD:-.}:/out"
 
   build-pdf:
-    build: https://github.com/openstax/cnx-recipes.git
-    image: openstax/cnx-recipes
+    build: .
+    # image: openstax/output-producer-thing
     environment:
+      PATH_TO_CNX_RECIPES: "${PATH_TO_CNX_RECIPES}"
       # This is necessary in order to mount the correct directory if we start
       # sibling containers
       HOST_PWD: "${PWD}"
       OUTPUT_DIR: /out
       BOOTSTRAP_ALREADY_RAN: 1
     volumes:
-      # - .:/code
-      - ./data:/code/data
+      - .:/code
+      - "${PATH_TO_CNX_RECIPES}/styles:/code/styles"
       - /var/run/docker.sock:/var/run/docker.sock
     entrypoint: /code/script/build-pdf
 
@@ -95,14 +95,13 @@ services:
       - "${HOST_PWD:-.}:/out"
 
   command:
-    build: https://github.com/openstax/cnx-recipes.git
-    image: openstax/cnx-recipes
+    build: .
+    # image: openstax/output-producer-thing
     environment:
       # This is necessary in order to mount the correct directory if we start
       # sibling containers
       HOST_PWD: "${PWD}"
       OUTPUT_DIR: /out
     volumes:
-      # - .:/code
-      - ./data:/code/data
+      - .:/code
       - /var/run/docker.sock:/var/run/docker.sock

@@ -1,0 +1,53 @@
+#!/bin/bash
+cd "$(dirname "$0")/.." || exit 111
+source ./script/bootstrap || exit 111
+
+arg1=$1
+baked_or_prepared_suffix=$2
+
+# Pull in the BOOK_CONFIGS
+source ./books.txt || exit 1
+
+# Check command line args
+
+if [[ -z "${arg1}" ]]; then
+  _say 'This script prepares the guide to compare against.'
+  _say 'Typically this step is done in the master branch'
+  _say 'and then in another branch diff-guide is called to see how the HTML changed.'
+  _say ''
+  _say "Valid recipes are (from ./books.txt):"
+  for recipe_name in "${RECIPE_NAMES[@]}"; do
+    _say "${recipe_name}"
+  done
+  die 'Argument Missing. You must specify the name of the recipe as the 1st argument or --all for all recipes.'
+fi
+
+if [[ -z "${baked_or_prepared_suffix}" ]]; then
+  baked_or_prepared_suffix="prepared"
+fi
+
+
+if [[ ! "${arg1}" == "--all" ]]; then
+  # Filter BOOK_CONFIGS to only contain the book you want to fetch
+  for recipe_name in "${RECIPE_NAMES[@]}"; do
+
+    if [[ "${arg1}" = "${recipe_name}" ]]; then
+      RECIPE_NAMES=("${recipe_name}")
+      found_config=1
+      break
+    fi
+  done
+
+  if [[ ! 1 -eq "${found_config}" ]]; then
+    _say "Valid books are (from ./books.txt):"
+    for recipe_name in "${RECIPE_NAMES[@]}"; do
+      _say "${recipe_name}"
+    done
+    die "Could not find Book info for recipe named ${arg1}"
+  fi
+fi
+
+for recipe_name in "${RECIPE_NAMES[@]}"; do
+  do_progress_quiet "Building guide for ${recipe_name}" \
+    ./script/build-guide "${recipe_name}" "${baked_or_prepared_suffix}"
+done
